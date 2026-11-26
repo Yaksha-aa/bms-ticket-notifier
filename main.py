@@ -568,12 +568,14 @@ def main():
     all_shows = []
     all_dates = []
     movie_info = {"name": "Unknown", "language": ""}
+    failed_dates = []
 
     for dc in date_list:
         data = fetch_bms(event_code, dc, region_code,
                          region_slug_r, lat, lon, geohash)
         if not data:
             print(f"  ⚠️  No data for date {dc or '(default)'}")
+            failed_dates.append(dc)
             continue
 
         if movie_info["name"] == "Unknown":
@@ -607,6 +609,12 @@ def main():
     # Build state & detect changes
     new_state = build_state(filtered, all_dates)
     old_state = load_state()
+
+    # Keep last known shows for dates whose fetch failed this run, so they
+    # don't vanish now and come back as false "NEW" alerts next run.
+    for key, val in old_state.get("shows", {}).items():
+        if val.get("date") in failed_dates:
+            new_state["shows"].setdefault(key, val)
 
     changes = []
     if old_state:
