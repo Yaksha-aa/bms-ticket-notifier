@@ -27,6 +27,7 @@ CONFIG = {
     "dates": os.getenv("BMS_DATES", ""),          # comma-separated YYYYMMDD, empty = from URL
     "theatre": os.getenv("BMS_THEATRE", ""),       # substring filter, empty = all
     "time_period": os.getenv("BMS_TIME", ""),      # e.g. "evening,night", empty = all
+    "screen": os.getenv("BMS_SCREEN", ""),         # screen/format filter, e.g. "barco", empty = all
 }
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
@@ -91,6 +92,7 @@ class ShowInfo:
     time_code: str
     screen_attr: str
     categories: list[CatInfo] = field(default_factory=list)
+    raw_text: str = ""  # full showtime data, lowercased, for screen matching
 
 @dataclass
 class DateInfo:
@@ -250,6 +252,7 @@ def parse_shows(data):
                         time_code=sa.get("showTimeCode", ""),
                         screen_attr=(st.get("screenAttr", "")
                                      or sa.get("attributes", "")),
+                        raw_text=json.dumps(st).lower(),
                     )
                     for cat in sa.get("categories", []):
                         ca = str(cat.get("availStatus", ""))
@@ -266,8 +269,11 @@ def parse_shows(data):
 # ──────────────────────────────────────────────────────────────────────
 # FILTERING
 # ──────────────────────────────────────────────────────────────────────
-def filter_shows(shows, theatre_filter, time_periods, date_codes):
+def filter_shows(shows, theatre_filter, time_periods, date_codes,
+                 screen_filter=""):
     result = []
+    screens = [k.strip().lower() for k in screen_filter.split(",")
+               if k.strip()] if screen_filter else []
     kws = [k.strip().lower() for k in theatre_filter.split(",")
            if k.strip()] if theatre_filter else []
     periods = [p.strip().lower() for p in time_periods.split(",")
@@ -281,6 +287,10 @@ def filter_shows(shows, theatre_filter, time_periods, date_codes):
             name_lower = s.venue_name.lower()
             if not any(k in name_lower for k in kws):
                 continue
+
+        # Screen filter (matches screen name/format anywhere in the show data)
+        if screens and not any(k in s.raw_text for k in screens):
+            continue
 
         # Date filter
         if dates_set and s.date_code and s.date_code not in dates_set:
@@ -584,8 +594,15 @@ def main():
         CONFIG["theatre"],
         CONFIG["time_period"],
         CONFIG["dates"],
+        CONFIG["screen"],
     )
     print(f"  📊 {len(filtered)} showtime(s) after filters")
+    if CONFIG["screen"] and not filtered:
+        venue_only = filter_shows(all_shows, CONFIG["theatre"], "", CONFIG["dates"])
+        if venue_only:
+            print(f"  ⚠️ No shows match screen '{CONFIG['screen']}'. "
+                  f"Screens seen at this venue: "
+                  f"{sorted(set(v.screen_attr for v in venue_only))}")
 
     # Build state & detect changes
     new_state = build_state(filtered, all_dates)

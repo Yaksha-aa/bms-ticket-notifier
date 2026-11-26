@@ -38,6 +38,7 @@ jobs:
           BMS_DATES: ${{ vars.BMS_DATES || '20261220,20261221,20261222,20261223' }}
           BMS_THEATRE: ${{ vars.BMS_THEATRE || 'AMB' }}
           BMS_TIME: ${{ vars.BMS_TIME }}
+          BMS_SCREEN: ${{ vars.BMS_SCREEN || 'barco' }}
         run: uv run main.py
 
       - name: Commit updated state
