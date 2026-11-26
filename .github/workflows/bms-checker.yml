@@ -34,7 +34,7 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           RESEND_TO_EMAIL: ${{ secrets.RESEND_TO_EMAIL }}
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
-          BMS_URL: ${{ vars.BMS_URL }}
+          BMS_URL: ${{ vars.BMS_URL || 'https://in.bookmyshow.com/movies/hyderabad/avengers-doomsday-english/ET00439706' }}
           BMS_DATES: ${{ vars.BMS_DATES || '20261220,20261221,20261222,20261223' }}
           BMS_THEATRE: ${{ vars.BMS_THEATRE || 'AMB' }}
           BMS_TIME: ${{ vars.BMS_TIME }}
