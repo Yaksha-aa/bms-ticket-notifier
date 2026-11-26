@@ -1,9 +1,8 @@
 name: BMS Ticket Checker
 
 on:
-  schedule:
-    # Every 5 minutes (GitHub's minimum)
-    - cron: '*/5 * * * *'
+  # Schedule turned off: BookMyShow blocks GitHub's servers (HTTP 403).
+  # The checker now runs on the phone instead — see phone.sh.
   workflow_dispatch:  # Manual trigger button
 
 concurrency:

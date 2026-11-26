@@ -10,6 +10,8 @@ import os
 import re
 import sys
 import json
+import shutil
+import subprocess
 from html import escape
 from datetime import datetime
 from dataclasses import dataclass, field
@@ -34,7 +36,7 @@ RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 RESEND_TO_EMAIL = os.getenv("RESEND_TO_EMAIL", "")
 RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "aviiciii@resend.dev")
 
-STATE_FILE = "bms_state.json"
+STATE_FILE = os.getenv("BMS_STATE_FILE", "bms_state.json")
 
 # ──────────────────────────────────────────────────────────────────────
 # CONSTANTS
@@ -393,6 +395,34 @@ def detect_changes(old_state, new_state):
 
 
 # ──────────────────────────────────────────────────────────────────────
+# PHONE NOTIFICATION (Termux on Android; does nothing elsewhere)
+# ──────────────────────────────────────────────────────────────────────
+def phone_notify(title, text, nid="bms-alert", loud=True, ongoing=False):
+    if not shutil.which("termux-notification"):
+        return
+    args = ["termux-notification", "--id", nid,
+            "--title", title, "--content", text,
+            "--action", f"termux-open-url {CONFIG['url']}"]
+    if loud:
+        args += ["--priority", "max", "--sound",
+                 "--vibrate", "600,300,600,300,600"]
+    else:
+        args += ["--priority", "low"]
+    if ongoing:
+        args += ["--ongoing"]
+    try:
+        subprocess.run(args, timeout=20)
+    except Exception as e:
+        print(f"  ⚠️  Phone notification failed: {e}")
+
+
+def phone_status(text):
+    now = datetime.now().strftime("%I:%M %p")
+    phone_notify("BMS watcher running", f"{text} · checked {now}",
+                 nid="bms-status", loud=False, ongoing=True)
+
+
+# ──────────────────────────────────────────────────────────────────────
 # EMAIL NOTIFICATION (Resend)
 # ──────────────────────────────────────────────────────────────────────
 def _cat_status_label(status):
@@ -586,6 +616,10 @@ def main():
 
     if not all_shows:
         print("  ❌ No showtimes found.")
+        if failed_dates:
+            phone_status("⚠️ BookMyShow didn't respond / blocked")
+        else:
+            phone_status("No shows listed yet")
         sys.exit(0)
 
     print(f"  🎬 {movie_info['name']}  {movie_info['language']}")
@@ -619,6 +653,14 @@ def main():
     changes = []
     if old_state:
         changes = detect_changes(old_state, new_state)
+    else:
+        phone_notify(
+            "✅ BMS watcher started",
+            f"Watching {len(filtered)} matching show(s). "
+            f"You'll be alerted when new ones appear.",
+            loud=False,
+        )
+    phone_status(f"{len(filtered)} matching show(s)")
 
     save_state(new_state)
 
@@ -629,6 +671,11 @@ def main():
         send_email(
             f"BMS Alert: {movie_info['name']} - {len(changes)} change(s)",
             changes, filtered, movie_info,
+        )
+        phone_notify(
+            f"🎟️ {movie_info['name']}: {len(changes)} update(s)",
+            "\n".join(changes[:6]) + ("\n…" if len(changes) > 6 else "")
+            + "\nTap to open BookMyShow",
         )
     else:
         print("  ✅ No changes since last check.")
