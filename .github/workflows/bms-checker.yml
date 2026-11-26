@@ -2,9 +2,13 @@ name: BMS Ticket Checker
 
 on:
   schedule:
-    # Every 30 minutes
-    - cron: '*/30 * * * *'
+    # Every 5 minutes (GitHub's minimum)
+    - cron: '*/5 * * * *'
   workflow_dispatch:  # Manual trigger button
+
+concurrency:
+  group: bms-checker
+  cancel-in-progress: false
 
 jobs:
   check-tickets:
