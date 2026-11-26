@@ -35,7 +35,7 @@ jobs:
           RESEND_TO_EMAIL: ${{ secrets.RESEND_TO_EMAIL }}
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
           BMS_URL: ${{ vars.BMS_URL }}
-          BMS_DATES: ${{ vars.BMS_DATES || '20261217,20261218,20261219,20261220' }}
+          BMS_DATES: ${{ vars.BMS_DATES || '20261220,20261221,20261222,20261223' }}
           BMS_THEATRE: ${{ vars.BMS_THEATRE || 'AMB' }}
           BMS_TIME: ${{ vars.BMS_TIME }}
         run: uv run main.py
